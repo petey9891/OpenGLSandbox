@@ -9,6 +9,141 @@
 #include <string>
 #include <sstream>
 
+#define CORES 8
+
+#define ASSERT(x) if (!(x)) assert(false)
+
+#define GLCall(x) GLClearError();\
+    x;\
+    ASSERT(GLCheckError())
+
+static void GLClearError()
+{
+    while (glGetError() != GL_NO_ERROR);
+}
+
+static bool GLCheckError()
+{
+    while (GLenum error = glGetError())
+    {
+        
+        std::cout << "[OpenGL Error] ";
+          switch(error) {
+              case GL_INVALID_ENUM :
+                  std::cout << "GL_INVALID_ENUM : An unacceptable value is specified for an enumerated argument.";
+                  break;
+              case GL_INVALID_VALUE :
+                  std::cout << "GL_INVALID_OPERATION : A numeric argument is out of range.";
+                  break;
+              case GL_INVALID_OPERATION :
+                  std::cout << "GL_INVALID_OPERATION : The specified operation is not allowed in the current state.";
+                  break;
+              case GL_INVALID_FRAMEBUFFER_OPERATION :
+                  std::cout << "GL_INVALID_FRAMEBUFFER_OPERATION : The framebuffer object is not complete.";
+                  break;
+              case GL_OUT_OF_MEMORY :
+                  std::cout << "GL_OUT_OF_MEMORY : There is not enough memory left to execute the command.";
+                  break;
+              case GL_STACK_UNDERFLOW :
+                  std::cout << "GL_STACK_UNDERFLOW : An attempt has been made to perform an operation that would cause an internal stack to underflow.";
+                  break;
+              case GL_STACK_OVERFLOW :
+                  std::cout << "GL_STACK_OVERFLOW : An attempt has been made to perform an operation that would cause an internal stack to overflow.";
+                  break;
+              default :
+                  std::cout << "Unrecognized error" << error;
+          }
+          std::cout << std::endl;
+          return false;
+    }
+    return true;
+}
+
+
+float temperature = 30.0f;
+float thread[CORES];
+float tmpTemperature = 40.0f;
+float tmpThread[CORES];
+
+float t = 0.0f;
+float updateTime = -10.0f;
+
+static const GLfloat vertices[] = {
+    -1.0f,
+    -1.0f,
+    0.0f,
+    -1.0f,
+    1.0f,
+    0.0f,
+
+    -0.33333333333f,
+    -1.0f,
+    0.0f,
+    -0.33333333333f,
+    1.0f,
+    0.0f,
+
+    -0.33333333333f,
+    -1.0f,
+    0.0f,
+    -0.33333333333f,
+    1.0f,
+    0.0f,
+
+    0.33333333333f,
+    -1.0f,
+    0.0f,
+    0.33333333333f,
+    1.0f,
+    0.0f,
+
+    0.33333333333f,
+    -1.0f,
+    0.0f,
+    0.33333333333f,
+    1.0f,
+    0.0f,
+
+    1.0f,
+    -1.0f,
+    0.0f,
+    1.0f,
+    1.0f,
+    0.0f,
+};
+
+static const GLfloat vcoords[] = {
+    0.0f,
+    0.0f,
+    -0.866f,
+    0.5f,
+
+    0.0f,
+    -1.0f,
+    -0.866f,
+    -0.5f,
+
+    0.0f,
+    0.0f,
+    0.0f,
+    -1.0f,
+
+    0.866f,
+    0.5f,
+    0.866f,
+    -0.5f,
+
+    0.0f,
+    0.0f,
+    0.866f,
+    0.5f,
+
+    -0.866f,
+    0.5f,
+    0.0f,
+    1.0f,
+};
+
 struct ShaderProgramSource
 {
     std::string VertexSource;
@@ -111,6 +246,9 @@ static unsigned int CreateShader(const std::string& vertexShader, const std::str
 
 int main( void )
 {
+	GLuint program, vert, frag, vbo, vbocoord;
+	GLint posLoc, coordLoc, temperatureLoc, threadLoc, timeLoc, ageLoc, result;
+
 	// Initialise GLFW
 	if( !glfwInit() )
 	{
@@ -124,7 +262,7 @@ int main( void )
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
 	glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE); // To make MacOS happy; should not be needed
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-
+    
 	// Open a window and create its OpenGL context
         GLFWwindow* window = glfwCreateWindow( 1024, 768, "Tutorial 02 - Red triangle", NULL, NULL);
 	if( window == NULL ){
@@ -149,55 +287,63 @@ int main( void )
 	// Ensure we can capture the escape key being pressed below
 	glfwSetInputMode(window, GLFW_STICKY_KEYS, GL_TRUE);
 
-	// Dark blue background
-	glClearColor(0.0f, 0.0f, 0.4f, 0.0f);
+	// Clear the whole screen (front buffer)
+	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-	GLuint VertexArrayID;
-	glGenVertexArrays(1, &VertexArrayID);
-	glBindVertexArray(VertexArrayID);
+    ShaderProgramSource source = ParseShader("res/shaders/Basic.shader");
+    unsigned int shader = CreateShader(source.VertexSource, source.FragmentSource);
+    glUseProgram(shader);
 
-        float positions[6] = {
-            -0.5f, -0.5f,
-             0.0f,  0.5f,
-             0.5f, -0.5f
-        };
+    GLCall(glGenBuffers(1, &vbo));
+	GLCall(glBindBuffer(GL_ARRAY_BUFFER, vbo));
+	GLCall(glBufferData(GL_ARRAY_BUFFER, 36 * sizeof(float), vertices, GL_STATIC_DRAW));
 
-        // Create buffer and copy data
-        GLuint buffer;
-        glGenBuffers(1, &buffer);
-        glBindBuffer(GL_ARRAY_BUFFER, buffer);
-        glBufferData(GL_ARRAY_BUFFER, 6 * sizeof(float), positions, GL_STATIC_DRAW);
+	GLCall(glGenBuffers(1, &vbocoord));
+	GLCall(glBindBuffer(GL_ARRAY_BUFFER, vbocoord));
+	GLCall(glBufferData(GL_ARRAY_BUFFER, 24 * sizeof(float), vcoords, GL_STATIC_DRAW));
 
-        // define vertex layout
-        glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), 0);
-        glEnableVertexAttribArray(0);
+	// Get vertex attribute and uniform locations
+	GLCall(posLoc = glGetAttribLocation(program, "pos"));
+	GLCall(coordLoc = glGetAttribLocation(program, "coord"));
+	GLCall(temperatureLoc = glGetUniformLocation(program, "temperature"));
+	GLCall(threadLoc = glGetUniformLocation(program, "thread"));
+	GLCall(timeLoc = glGetUniformLocation(program, "time"));
+	GLCall(ageLoc = glGetUniformLocation(program, "age"));
 
-        ShaderProgramSource source = ParseShader("res/shaders/Basic.shader");
+	// Set our vertex data
+	GLCall(glEnableVertexAttribArray(posLoc));
+	GLCall(glBindBuffer(GL_ARRAY_BUFFER, vbo));
+	GLCall(glVertexAttribPointer(posLoc, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void *) 0));
 
-        std::cout << "VERTEX" << std::endl << source.VertexSource << std::endl;
-        std::cout << "FRAGMENT" << std::endl << source.FragmentSource << std::endl;
+	GLCall(glEnableVertexAttribArray(coordLoc));
+	GLCall(glBindBuffer(GL_ARRAY_BUFFER, vbocoord));
+	GLCall(glVertexAttribPointer(coordLoc, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void *) 0));
 
-        unsigned int shader = CreateShader(source.VertexSource, source.FragmentSource);
-        glUseProgram(shader);
+	while(glfwGetKey(window, GLFW_KEY_ESCAPE ) != GLFW_PRESS && glfwWindowShouldClose(window) == 0 ) {
+        // Clear the screen
+         glClear(GL_COLOR_BUFFER_BIT);
 
-	do{
-		// Clear the screen
-		glClear( GL_COLOR_BUFFER_BIT );
+        // Draw
+        t += 0.01f;
 
-		// Draw the triangle !
-		glDrawArrays(GL_TRIANGLES, 0, 3); // 3 indices starting at 0 -> 1 triangle
+		GLCall(glUniform1f(timeLoc, t));
+		GLCall(glUniform1f(ageLoc, float(t - updateTime)));
 
-		// Swap buffers
-		glfwSwapBuffers(window);
-		glfwPollEvents();
+		GLCall(glUniform1f(temperatureLoc, temperature));
+		GLCall(glUniform1fv(threadLoc, CORES, thread));
+		GLCall(glDrawArrays(GL_TRIANGLE_STRIP, 0, 12));
+        
+        // Swap buffers
+        GLCall(glfwSwapBuffers(window));
 
-	} // Check if the ESC key was pressed or the window was closed
-	while( glfwGetKey(window, GLFW_KEY_ESCAPE ) != GLFW_PRESS &&
-		   glfwWindowShouldClose(window) == 0 );
+        // Poll
+        GLCall(glfwPollEvents());
+    }
 
 	// Cleanup VBO
-	glDeleteBuffers(1, &buffer);
-	glDeleteVertexArrays(1, &VertexArrayID);
+	glDeleteBuffers(1, &vbo);
+    glDeleteBuffers(1, &vbocoord);
 	glDeleteProgram(shader);
 
 	// Close OpenGL window and terminate GLFW
