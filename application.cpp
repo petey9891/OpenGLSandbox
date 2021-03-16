@@ -312,12 +312,12 @@ int main( void )
 	GLCall(ageLoc = glGetUniformLocation(program, "age"));
 
 	// Set our vertex data
-	// GLCall(glEnableVertexAttribArray(posLoc));
+	GLCall(glEnableVertexAttribArray(posLoc));
 	GLCall(glBindBuffer(GL_ARRAY_BUFFER, vbo));
 	GLCall(glVertexAttribPointer(posLoc, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void *) 0));
 
 
-	// GLCall(glEnableVertexAttribArray(coordLoc));
+	GLCall(glEnableVertexAttribArray(coordLoc));
 	GLCall(glBindBuffer(GL_ARRAY_BUFFER, vbocoord));
 	GLCall(glVertexAttribPointer(coordLoc, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void *) 0));
 

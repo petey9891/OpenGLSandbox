@@ -14,6 +14,95 @@
 
 #include "Debug.h"
 
+//Animation speed
+#define ANIMSTEP 0.5
+
+#define CORES 8
+
+float temperature = 30.0f;
+float thread[CORES];
+float tmpTemperature = 40.0f;
+float tmpThread[CORES];
+
+float t = 0.0f;
+float updateTime = -10.0f;
+
+static const GLfloat vertices[] = {
+    -1.0f,
+    -1.0f,
+    0.0f,
+    -1.0f,
+    1.0f,
+    0.0f,
+
+    -0.33333333333f,
+    -1.0f,
+    0.0f,
+    -0.33333333333f,
+    1.0f,
+    0.0f,
+
+    -0.33333333333f,
+    -1.0f,
+    0.0f,
+    -0.33333333333f,
+    1.0f,
+    0.0f,
+
+    0.33333333333f,
+    -1.0f,
+    0.0f,
+    0.33333333333f,
+    1.0f,
+    0.0f,
+
+    0.33333333333f,
+    -1.0f,
+    0.0f,
+    0.33333333333f,
+    1.0f,
+    0.0f,
+
+    1.0f,
+    -1.0f,
+    0.0f,
+    1.0f,
+    1.0f,
+    0.0f,
+};
+
+static const GLfloat vcoords[] = {
+    0.0f,
+    0.0f,
+    -0.866f,
+    0.5f,
+
+    0.0f,
+    -1.0f,
+    -0.866f,
+    -0.5f,
+
+    0.0f,
+    0.0f,
+    0.0f,
+    -1.0f,
+
+    0.866f,
+    0.5f,
+    0.866f,
+    -0.5f,
+
+    0.0f,
+    0.0f,
+    0.866f,
+    0.5f,
+
+    -0.866f,
+    0.5f,
+    0.0f,
+    1.0f,
+};
+
 GLFWwindow* InitWindow() {
 	// Initialise GLFW
 	if (!glfwInit()) {
@@ -67,57 +156,49 @@ int main( void )
         return -1;
     }
 
-	// Dark blue background
-	glClearColor(0.0f, 0.0f, 0.4f, 0.0f);
-
-     float positions[] = {
-        -0.5f, -0.5f, // 0
-         0.5f, -0.5f, // 1
-         0.5f,  0.5f, // 2
-        -0.5f,  0.5f  // 3
-    };
-
-    unsigned int indices[] = {
-        0, 1, 2,
-        2, 3, 0
-    };
-
+	// Clear the whole screen (front buffer)
+	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        
     {
-        // Move to another scope because we are creating these vertex arrays on the stack instead of heap
-        // Runs into an infinite loop when exiting since glGetError throws an error when there is not a valid context
-        VertexArray va;
-        VertexBuffer vb(positions, 4 * 2 * sizeof(float));
-        IndexBuffer ib(indices, 6);
-
-        VertexBufferLayout layout;
-        layout.addFloat(2);
-
-        va.addBuffer(vb, layout);
-
         Shader shader("../res/shaders/basic.shader");
         shader.bind();
-        
 
-        float r = 0.0f;
-        float increment = 0.05f;
+        VertexBuffer verticesBuffer(vertices, 36 * sizeof(float));
+        VertexBuffer vcoordsBuffer(vcoords, 24 * sizeof(float));
+
+
+        VertexArray verticesArray;
+        VertexBufferLayout verticiesLayout;
+        verticiesLayout.addFloat(3);
+        verticesArray.addBuffer(verticesBuffer, verticiesLayout);
+
+        VertexArray vcoordsArray;
+        VertexBufferLayout vcoordsLayout;
+        vcoordsLayout.addFloat(2);
+        vcoordsArray.addBuffer(vcoordsBuffer, vcoordsLayout);
 
         Renderer renderer;
 
 		while( glfwGetKey(window, GLFW_KEY_ESCAPE ) != GLFW_PRESS && glfwWindowShouldClose(window) == 0 ) {
             renderer.clear();
+      
+            t += 0.01f;
 
             shader.bind();
-            shader.setUniform4f("u_Color", r, 0.6f, 0.8f, 1.0f);
+            // vcoordsBuffer.bind();
+            shader.setUniform1f("time", t);
+            shader.setUniform1f("age", float(t - updateTime));
+
+            shader.setUniform1f("temperature", temperature);
+            shader.setUniform1fv("thread", CORES, thread);
+
+            renderer.drawArrays(verticesArray, shader);
+
+            // GLCall(glDrawArrays(GL_TRIANGLE_STRIP, 0, 12));
 
 
-            renderer.draw(va, ib, shader);
-
-            // increment r
-            if (r < 0.0f || r > 1.0f)
-                increment *= -1.0;
-            r += increment;
-
-                        // Swap buffers
+            // Swap buffers
             glfwSwapBuffers(window);
             glfwPollEvents();
         }

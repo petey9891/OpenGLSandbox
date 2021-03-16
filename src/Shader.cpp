@@ -46,6 +46,10 @@ void Shader::setUniform4f(const std::string& name, float v1, float v2, float v3,
     GLCall(glUniform4f(this->getUniformLocation(name), v1, v2, v3, v4));
 }
 
+void Shader::setUniform1fv(const std::string& name, float count, const float* value) {
+    GLCall(glUniform1fv(this->getUniformLocation(name), count, value));
+}
+
 enum ShaderType
 {
     NONE = -1, VERTEX = 0, FRAGMENT = 1
