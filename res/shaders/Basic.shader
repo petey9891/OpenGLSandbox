@@ -2,7 +2,7 @@
 #version 330 core
 layout(location = 0) in vec3 pos;
 layout(location = 1) in vec2 coord;
-vec2 backgroundCoord;
+out vec2 backgroundCoord;
 void main() {
     backgroundCoord = coord;
     gl_Position = vec4(pos, 1.0);
@@ -30,7 +30,7 @@ vec3 rColorHot = vec3(1.0, 1.0, 1.0);
 
 uniform float age;
 uniform float time;
-out vec2 backgroundCoord;
+in vec2 backgroundCoord;
 out vec4 diffuseColor;
 
 
