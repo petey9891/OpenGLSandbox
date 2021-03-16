@@ -46,12 +46,14 @@ vec3 paintCircle (vec2 uv, float rad, float width) {
     
     float len = length(uv);
 
-    // Adds variation to the top half of the circle
-    // len += variation(uv, vec2(0.0, 1.0), 5.0, 1.5);
+    if (!loading) {
+        // Adds variation to the top half of the circle
+        len += variation(uv, vec2(0.0, 1.0), 5.0, 0.5);
 
-    // Adds variation to the lower half of the cirlce
-    // len -= variation(uv, vec2(1.0, 0.0), 5.0, 1.5);
-    
+        // Adds variation to the lower half of the cirlce
+        len -= variation(uv, vec2(1.0, 0.0), 5.0, 0.5);
+    }
+
     // perform Hermite interpolation between two values
     float circle = smoothstep(rad-width, rad, len) - smoothstep(rad, rad+width, len);
 
