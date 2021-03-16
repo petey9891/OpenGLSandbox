@@ -135,6 +135,8 @@ int main( void )
 	}
 	glfwMakeContextCurrent(window);
 
+    glfwSwapInterval(1); // Syncs with refresh rate
+
 	// Initialize GLEW
 	glewExperimental = true; // Needed for core profile
 	if (glewInit() != GLEW_OK) {
@@ -174,26 +176,36 @@ int main( void )
 
         ShaderProgramSource source = ParseShader("res/shaders/Basic.shader");
 
-        std::cout << "VERTEX" << std::endl << source.VertexSource << std::endl;
-        std::cout << "FRAGMENT" << std::endl << source.FragmentSource << std::endl;
-
         unsigned int shader = CreateShader(source.VertexSource, source.FragmentSource);
         glUseProgram(shader);
 
-	do{
-		// Clear the screen
-		glClear( GL_COLOR_BUFFER_BIT );
+        int location = glGetUniformLocation(shader, "u_Color");
+        glUniform4f(location, 0.8f, 0.3f, 0.8f, 1.0f);
 
-		// Draw the triangle !
-		glDrawArrays(GL_TRIANGLES, 0, 3); // 3 indices starting at 0 -> 1 triangle
+        float r = 0.0f;
+        float increment = 0.05f;
+		while( glfwGetKey(window, GLFW_KEY_ESCAPE ) != GLFW_PRESS && glfwWindowShouldClose(window) == 0 ) {
+            // Clear the screen
+            glClear( GL_COLOR_BUFFER_BIT );
 
-		// Swap buffers
-		glfwSwapBuffers(window);
-		glfwPollEvents();
+            // Draw the triangle !
 
-	} // Check if the ESC key was pressed or the window was closed
-	while( glfwGetKey(window, GLFW_KEY_ESCAPE ) != GLFW_PRESS &&
-		   glfwWindowShouldClose(window) == 0 );
+            glUniform4f(location, r, 0.6f, 0.8f, 1.0f);
+            glDrawArrays(GL_TRIANGLES, 0, 3); // 3 indices starting at 0 -> 1 triangle
+
+            if (r > 1.0f) {
+                increment = -0.05f;
+            } else if (r < 0.0f) {
+                increment = 0.05f;
+            }
+
+            r += increment;
+
+            // Swap buffers
+            glfwSwapBuffers(window);
+            glfwPollEvents();
+
+        }
 
 	// Cleanup VBO
 	glDeleteBuffers(1, &buffer);
