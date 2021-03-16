@@ -6,8 +6,13 @@
 #include <fstream>
 #include <sstream>
 
-Shader::Shader(const std::string& filepath): m_FilePath(filepath), m_RendererID(0) {
+Shader::Shader(const std::string& filepath): m_RendererID(0), m_FilePath(filepath) {
+    // printf("filepath: %s\n", filepath.c_str());
     ShaderProgramSource source = this->parseShader(filepath);
+
+    printf("\nVertex Shader:\n%s\n", source.vertexSource.c_str());
+    printf("\nFragment Shader:\n%s\n\n", source.fragmentSource.c_str());
+
     this->m_RendererID = this->createShader(source.vertexSource, source.fragmentSource);
 
     GLCall(glUseProgram(this->m_RendererID));

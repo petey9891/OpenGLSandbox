@@ -1,28 +1,56 @@
-CC=clang++
-current_directory=$(shell pwd)
+CXXFLAGS=-O2 -W -Wall -Wextra -Wno-unused-parameter -D_FILE_OFFSET_BITS=64
 
-FRAMEWORKS=-framework OpenGL -framework Cocoa -framework IOKit -framework CoreVideo
+OBJECTS=app.o IndexBuffer.o Renderer.o Shader.o VertexArray.o VertexBuffer.o
+BINARIES=app            
 
-CFLAGS=-std=c++11
-CFLAGS+=-I$(current_directory)
-CFLAGS+=-I$(current_directory)/../include
+CURRENT_DIRECTORY=$(shell pwd)
 
-LDFLAGS=-L$(current_directory)/../lib
-LDFLAGS+=-lglfw3
-LDFLAGS+=-lGLEW
+# Where our library resides. You mostly only need to change the                               
+# # RGB_LIB_DISTRIBUTION, this is where the library is checked out.                             
+RGB_LIB_DISTRIBUTION=../../rpi-rgb-led-matrix
+RGB_INCDIR=$(RGB_LIB_DISTRIBUTION)/include
+RGB_LIBDIR=$(RGB_LIB_DISTRIBUTION)/lib
+RGB_LIBRARY_NAME=rgbmatrix
+RGB_LIBRARY=$(RGB_LIBDIR)/lib$(RGB_LIBRARY_NAME).a
+LDFLAGS=-L$(RGB_LIBDIR) -l$(RGB_LIBRARY_NAME) -lrt -lm -lpthread -lbrcmEGL -lbrcmGLESv2 -lGLESv2 -I/opt/vc/include -L/opt/vc/lib
 
-SOURCES=$(wildcard *.cpp)
-OBJECTS=$(patsubst %.cpp, %.o, $(SOURCES))
+# -L$(CURRENT_DIRECTORY)/../lib
+# -ldl -lX11 -lGL -lGLU -lGLEW -lbrcmEGL -lbrcmGLESv2 -lrt -lm -lpthread -I/opt/vc/include -L/opt/vc/lib
 
+all : $(BINARIES)
 
-%.o: %.cpp
-	$(CC) $(CFLAGS) -c -o $@ $^
+$(RGB_LIBRARY): FORCE
+	$(MAKE) -C $(RGB_LIBDIR)
 
-app: $(OBJECTS)
-	$(CC) $(CFLAGS) $(LDFLAGS) $(FRAMEWORKS) -o app $(OBJECTS)
+# app: app.o $(RGB_LIBRARY)
+app: $(OBJECTS) $(RGB_LIBRARY)
+	$(CXX) $(CXXFLAGS) $(OBJECTS) -o $@ $(LDFLAGS)
 
-all: app
+%.o : %.cpp
+	$(CXX) -I$(RGB_INCDIR) $(CXXFLAGS) -c -o $@ $<
 
-.PHONY: clean
+app.o: application.cpp
+	$(CXX) -I$(RGB_INCDIR) $(CXXFLAGS) -c -o $@ $<
+
+IndexBuffer.o: IndexBuffer.cpp
+	$(CXX) -I$(RGB_INCDIR) $(CXXFLAGS) -c -o $@ $<
+
+Renderer.o: Renderer.cpp
+	$(CXX) -I$(RGB_INCDIR) $(CXXFLAGS) -c -o $@ $<
+
+Shader.o: Shader.cpp
+	$(CXX) -I$(RGB_INCDIR) $(CXXFLAGS) -c -o $@ $<
+
+VertexArray.o: VertexArray.cpp
+	$(CXX) -I$(RGB_INCDIR) $(CXXFLAGS) -c -o $@ $<
+
+VertexBuffer.o: VertexBuffer.cpp
+	$(CXX) -I$(RGB_INCDIR) $(CXXFLAGS) -c -o $@ $<
+
 clean:
-	rm -f *.o app
+	rm -f $(OBJECTS) $(BINARIES)
+
+FORCE:
+.PHONY: FORCE
+
+# -I$(CURRENT_DIRECTORY)/../include
